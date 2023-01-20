@@ -12,3 +12,6 @@ Use `ttracker --help` to print available commands.
 ## Building
 run `cmake -S . -B. & make` to build.
 Requires sqlite3 and fmt development libraries.
+
+## Installing
+`sudo make install`
