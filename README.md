@@ -8,3 +8,7 @@ TTracker is ment for easy time tracking via the command line.
 ## Usage
 
 Use `ttracker --help` to print available commands.
+
+## Building
+run `cmake -S . -B. & make` to build.
+Requires sqlite3 and fmt development libraries.
