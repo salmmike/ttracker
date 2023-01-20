@@ -52,10 +52,15 @@ void TTrackerDatabase::startTask(std::string name)
     std::string arg = name;
     if (name.empty()) {
         arg = currentTask();
+    } else if (name != currentTask()) {
+        if (db->working(currentTask())) {
+            std::cout << "Pausing task \"" + currentTask() + "\"\n";
+            dbWriteTaskPause(currentTask());
+        }
     }
 
     if (!db->exists(arg)) {
-        throw TTrackerException("start task No task named " + arg);
+        throw TTrackerException("No task named " + arg);
     }
 
     writeTaskFile(arg);
@@ -114,6 +119,11 @@ void TTrackerDatabase::clear()
     writeTaskFile("");
 }
 
+bool TTrackerDatabase::checkWorking(const std::string &name)
+{
+    return db->working(name);
+}
+
 std::vector<std::string> TTrackerDatabase::allTasks(time_t since)
 {
     return db->getTasks(since);
@@ -131,16 +141,15 @@ void TTrackerDatabase::dbWriteTaskStart(const std::string &name)
 {
     std::string task = name;
     if (name.empty()) {
-        std::cout << name << " is empty!" << std::endl;
         task = currentTask();
     }
     if (task.empty()) {
-        throw TTrackerException("dbWriteTaskStart No task named " + task);
+        throw TTrackerException("No task named " + task);
     }
     if (!db->working(task)) {
         db->addStart(task);
     } else {
-        throw TTrackerException(task + " is already started.\n");
+        throw TTrackerException(task + " is already started.");
     }
 }
 

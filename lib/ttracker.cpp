@@ -60,7 +60,7 @@ void TTracker::continueTask(int argc, char** argv)
         task = database->currentTask();
     }
     database->startTask(task);
-    std::cout << "Started task " << task << "\n";
+    std::cout << "Started task \"" << task << "\"\n";
 }
 
 void TTracker::createTask(int argc, char** argv)
@@ -86,7 +86,7 @@ void TTracker::makeSummary(std::string task, time_t since)
         std::cout << "\"" << task << "\" worked on for " <<
             fmt::format("{:.2}", tc->secondsToHours(timeSpent)) << " hours.\n";
     } else {
-        std::cout << "Task \"" << task << "\" worked on for" <<
+        std::cout << "Task \"" << task << "\" worked on for " <<
             fmt::format("{:.2}", tc->secondsToMinutes(timeSpent)) << " minutes.\n";
     }
 }
@@ -111,13 +111,18 @@ void TTracker::task()
     if (current.empty()) {
         std::cout << "No task started.\n";
     } else {
-        std::cout << "Current task is " << current << "\n";
+        std::cout << "Current task is \"" << current <<
+            "\". State: " << (database->checkWorking(current) ? "working.\n" : "paused.\n");
     }
 }
 
 void TTracker::pause()
 {
-    std::cout << "Paused task " << database->pauseTask() << "\n";
+    if (database->checkWorking(database->currentTask())) {
+        std::cout << "Paused task \"" << database->pauseTask() << "\"\n";
+    } else {
+        std::cout << "Task \"" << database->currentTask() << "\" is paused.\n";
+    }
 }
 
 void TTracker::summary(int argc, char** argv)

@@ -65,6 +65,8 @@ public:
     */
     void clear();
 
+    bool checkWorking(const std::string &name);
+
     std::vector<std::string> allTasks(time_t since=0);
 
 private:
