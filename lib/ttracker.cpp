@@ -108,6 +108,7 @@ void TTracker::createTask(const std::vector<std::string> &argv)
 {
     if (argv.size() <= 1) {
         std::cout << "No task name defined!\n";
+        return;
     }
     database->createTask(argv[1]);
     std::cout << "Created task \"" << argv[1] << "\"\n";
