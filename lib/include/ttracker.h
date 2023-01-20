@@ -35,7 +35,7 @@ private:
     /*
     Start working on taskName. If empty, continue previous task.
     */
-    void startWorking(int argc, char** argv);
+    void startWorking(const std::vector<std::string> &argv);
 
     /*
     Pause working current task.
@@ -45,21 +45,27 @@ private:
     /*
     Create a new task.
     */
-    void createTask(int argc, char** argv);
+    void createTask(const std::vector<std::string> &argv);
 
     /*
     Continue on task.
     */
-    void continueTask(int argc, char** argv);
+    void continueTask(const std::vector<std::string> &argv);
 
 
-    void summary(int argc, char** argv);
+    void summary(const std::vector<std::string> &argv);
 
-    void makeSummary(std::string task, time_t since);
+    void makeSummary(std::string task, time_t since, bool printNoExists=true);
 
     time_t parseTime(std::string str);
 
     void task();
+
+    void version() const;
+
+    void clear(const std::vector<std::string> &argv);
+
+    time_t getSince(const std::vector<std::string> &argv);
 
 };
 

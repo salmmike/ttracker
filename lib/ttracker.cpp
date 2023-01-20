@@ -19,6 +19,11 @@
 #include <ttracker.h>
 #include <cstring>
 #include <fmt/core.h>
+#include <algorithm>
+
+#define xstr(a) str(a)
+#define str(a) #a
+#define VERSION xstr(TTRACKER_VERSION)
 
 namespace ttracker{
 
@@ -28,17 +33,25 @@ void TTracker::parseArgs(int argc, char **argv)
         usage();
         return;
     }
+    std::vector<std::string> args(argc - 1);
+    for (int i = 1; i < argc; ++i) {
+        args[i - 1] = argv[i];
+    }
 
     if (! strcmp(argv[1], "create")) {
-        createTask(argc, argv);
+        createTask(args);
     } else if (! strcmp(argv[1], "start")) {
-        continueTask(argc, argv);
+        continueTask(args);
     } else if (! strcmp(argv[1], "pause")) {
         pause();
     } else if (! strcmp(argv[1], "summary")) {
-        summary(argc, argv);
+        summary(args);
     } else if (! strcmp(argv[1], "task")) {
         task();
+    } else if (! strcmp(argv[1], "--version")) {
+        version();
+    } else if (! strcmp(argv[1], "clear")) {
+        clear(args);
     } else {
         usage();
     }
@@ -48,34 +61,37 @@ void TTracker::usage()
 {
     auto usageStr =
     "TTracker: Tool for keeping track of time spent on various tasks.\n"
-    "Usage:\n"
-    "ttracker create [taskname]\n"
-    "   Add a new task.\n\n"
-    "ttracker start [taskname]\n"
-    "   Start or continue working on task. If no name is set, continue on"
+    "version: " VERSION
+    "\nUsage:\n\n"
+    "  ttracker create [taskname]\n"
+    "    Add a new task.\n\n"
+    "  ttracker start [taskname]\n"
+    "    Start or continue working on task. If no name is set, continue on"
     " previous task.\n\n"
-    "ttracker pause\n"
-    "   Pause working on current task\n\n"
-    "ttracker summary [--since time] [taskname]\n"
-    "   Get summary of task. Available values for since: d (days), h (hours)\n"
-    "   If no task name is provided, print summary of all tasks.\n\n"
-    "ttracker task\n"
-    "   print current task.\n";
+    "  ttracker pause\n"
+    "    Pause working on current task\n\n"
+    "  ttracker summary [--since time] [taskname]\n"
+    "    Get summary of task. Available values for since: d (days), h (hours)\n"
+    "    If no task name is provided, print summary of all tasks.\n\n"
+    "  ttracker task\n"
+    "    print current task.\n\n"
+    "  ttracker clear\n"
+    "    Remove all tasks.\n";
 
-    std::cout << usageStr;
+    std::cout << usageStr << "\n";
 }
 
-void TTracker::continueTask(int argc, char** argv)
+void TTracker::continueTask(const std::vector<std::string> &argv)
 {
     std::string task;
-    if (argc > 2) {
-        task = argv[2];
+    if (argv.size() >= 2) {
+        task = argv[1];
         if (!database->checkExists(task)) {
             std::cout << "No task \"" << task << "\". Create it? (y/N):";
             std::string ans;
             getline(std::cin, ans);
             if (ans == "Y" || ans == "y") {
-                createTask(argc, argv);
+                createTask(argv);
             } else {
                 std::cout << "No task created.\n";
                 return;
@@ -88,27 +104,27 @@ void TTracker::continueTask(int argc, char** argv)
     std::cout << "Started task \"" << task << "\"\n";
 }
 
-void TTracker::createTask(int argc, char** argv)
+void TTracker::createTask(const std::vector<std::string> &argv)
 {
-    if (argc <= 2) {
+    if (argv.size() <= 1) {
         std::cout << "No task name defined!\n";
     }
-    database->createTask(argv[2]);
-    std::cout << "Created task \"" << argv[2] << "\"\n";
+    database->createTask(argv[1]);
+    std::cout << "Created task \"" << argv[1] << "\"\n";
 }
 
-void TTracker::makeSummary(std::string task, time_t since)
+void TTracker::makeSummary(std::string task, time_t since, bool printNoExists)
 {
     if (!database->checkExists(task)) {
-        std::cout << "No task named \"" << task << "\"\n";
+        if (printNoExists) {
+            std::cout << "No task named \"" << task << "\"\n";
+        }
         return;
     }
     auto timeSpent = database->getTime(task, since);
-    if (timeSpent < 30) {
-        return;
-    }
+
     if (timeSpent > 60*60) {
-        std::cout << "\"" << task << "\" worked on for " <<
+        std::cout << "Task \"" << task << "\" worked on for " <<
             fmt::format("{:.2}", tc->secondsToHours(timeSpent)) << " hours.\n";
     } else {
         std::cout << "Task \"" << task << "\" worked on for " <<
@@ -141,6 +157,34 @@ void TTracker::task()
     }
 }
 
+void TTracker::clear(const std::vector<std::string> &argv)
+{
+    if (argv.size() == 1) {
+        std::cout << "This will clear all tasks. Are you sure? (y/N): ";
+        std::string ans;
+        getline(std::cin, ans);
+        if (ans == "Y" || ans == "y") {
+            database->clear();
+            std::cout << "All tasks cleard!\n";
+        }
+    }
+}
+
+time_t TTracker::getSince(const std::vector<std::string> &argv)
+{
+    auto timeit = std::find(std::begin(argv), std::end(argv), "--since");
+
+    if (timeit == std::end(argv) || (timeit + 1) == std::end(argv)) {
+        return 0;
+    }
+    return parseTime(*(timeit + 1));
+}
+
+void TTracker::version() const
+{
+    std::cout << "Version: " << VERSION << std::endl;
+}
+
 void TTracker::pause()
 {
     if (database->checkWorking(database->currentTask())) {
@@ -150,25 +194,19 @@ void TTracker::pause()
     }
 }
 
-void TTracker::summary(int argc, char** argv)
+void TTracker::summary(const std::vector<std::string> &argv)
 {
-    if ( (argc == 2) || (!strcmp(argv[2], "--since")) ) {
-        time_t since = 0;
-        if (argc == 4) {
-            since = parseTime(argv[3]);
-        }
+    time_t since = getSince(argv);
 
-        auto tasks = database->allTasks(since);
-        for (auto task : tasks) {
+    if (argv.size() == 1 || argv.size() == 3) {
+        for (auto task : database->allTasks(since)) {
             makeSummary(task, since);
         }
+    } else if (argv.size() == 2) {
+        makeSummary(argv[1], since);
     } else {
-        if (argc >= 5) {
-            makeSummary(argv[4], parseTime(argv[3]));
-        } else if (argc == 3) {
-            makeSummary(argv[2], 0);
-        } else {
-            usage();
+        for (auto &str : argv) {
+            makeSummary(str, since, false);
         }
     }
 }
