@@ -1,3 +1,4 @@
+
 #include <ttracker.h>
 #include <cstring>
 #include <fmt/core.h>
@@ -53,8 +54,15 @@ void TTracker::continueTask(int argc, char** argv)
     if (argc > 2) {
         task = argv[2];
         if (!database->checkExists(task)) {
-            std::cout << "No task " << task << ". Create it first!\n";
-            return;
+            std::cout << "No task \"" << task << "\". Create it? (y/N):";
+            std::string ans;
+            getline(std::cin, ans);
+            if (ans == "Y" || ans == "y") {
+                createTask(argc, argv);
+            } else {
+                std::cout << "No task created.\n";
+                return;
+            }
         }
     } else {
         task = database->currentTask();
@@ -69,7 +77,7 @@ void TTracker::createTask(int argc, char** argv)
         std::cout << "No task name defined!\n";
     }
     database->createTask(argv[2]);
-    std::cout << "Created task " << argv[2] << "\n";
+    std::cout << "Created task \"" << argv[2] << "\"\n";
 }
 
 void TTracker::makeSummary(std::string task, time_t since)
